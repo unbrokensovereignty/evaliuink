@@ -1,0 +1,182 @@
+/* EVALIU INK, Core home hero (3D statue, the "Dolly" shot). Travels with hero-core.html into one
+   Squarespace Code block (or Custom CSS). Uses the site tokens --grey-light, --gutter, --ease-out,
+   --ease-in-out (with fallbacks, so the paste works on its own) and the .wordmark / .label type from site.css.
+   Palette only: #FFFFFF #111111 #6B6B6B #B5B5B5 #EDEDED. */
+
+.hero { position: relative; }
+.hero--3d { display: block; min-height: 0; height: auto; padding: 0; overflow: visible; background: var(--grey-light, #EDEDED); }
+/* Pinned length while the script runs: the shot plays over the first 86% of the pinned scroll and
+   the close-up holds for the rest. With no script the hero is the one-screen static layout below. */
+.hero--3d[data-3d="loading"], .hero--3d[data-3d="ready"] { height: 320vh; }
+
+/* The stage is as tall as the large viewport, so a retracting phone URL bar never uncovers the
+   canvas edge. Copy and hint are sticky, not absolute: they hold 40px above the bottom of
+   whatever is on screen (under the site header on load, above the URL bar on phones).
+   overflow: clip keeps them sticking to the page scroll; hidden is the older-browser fallback. */
+.hero__stage {
+  position: sticky; top: 0; height: 100vh; height: 100lvh; overflow: hidden; overflow: clip;
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 0 24px; padding: 0 var(--gutter, clamp(16px, 4vw, 56px)) 40px;
+  background: var(--grey-light, #EDEDED);
+}
+/* The wordmark is backdrop: the script carries it up and out of frame as the camera pushes in. */
+.hero--3d .wordmark { position: absolute; top: 9vh; left: var(--gutter, clamp(16px, 4vw, 56px)); margin-left: -0.04em; z-index: 0; }
+/* Readers who widen letter and word spacing (WCAG 1.4.12) would push INK past the screen edge: then, and
+   only then, it wraps under EVALIU. The box runs to the right screen edge (only the left gutter is kept),
+   so a live display font a little wider than the local one still stays on one line as long as it fits
+   on screen (R5-6 round 3; hero3d.js measures the wordmark's real height, so the framing follows). */
+.hero--3d .wordmark { white-space: normal; max-width: calc(100% - var(--gutter, clamp(16px, 4vw, 56px))); }
+
+/* Handoff from the still drawing to the statue. The drawing sits under the canvas, on the spot
+   where her torso will be (the script sets --ink-x/y/h and data-ink), so opaque statue pixels
+   cover it as they arrive. The canvas fades in at once; the drawing starts leaving 100ms
+   later and blurs as it goes, so the two overlap and the stage never empties. */
+.hero__canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; opacity: 0; transition: opacity 400ms var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1)); }
+.hero--3d[data-3d="ready"] .hero__canvas { opacity: 1; }
+/* Multiply sits on the positioned wrapper: on the img it would be isolated by the wrapper's own stacking context. */
+.hero--3d .hero__fallback {
+  position: absolute; inset: 0; z-index: 0; mix-blend-mode: multiply; pointer-events: none;
+  transition: opacity 300ms var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1)) 100ms, filter 300ms var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1)) 100ms, visibility 0s linear 400ms;
+}
+.hero--3d[data-3d="ready"] .hero__fallback { opacity: 0; filter: blur(4px); visibility: hidden; }
+/* Forced colours (high contrast) can paint the stage black: multiply would hide the drawing (R7 HC1). */
+@media (forced-colors: active) { .hero--3d .hero__fallback { mix-blend-mode: normal; } }
+/* Without the script: the drawing on the right, its drawn area (78% x 63% of the file, centred at
+   54.4% / 58.4% of it) running from 16px under the wordmark to 48px above the stage bottom. */
+.hero--3d .hero__fallback img {
+  position: absolute; left: 70%; width: auto; max-width: min(56vw, calc(100% - 32px)); object-fit: contain;
+  top: calc((9vh + 14.3vw + 16px + 100% - 48px) / 2); height: calc((100% - 64px - 9vh - 14.3vw) / 0.632);
+  transform: translate(-54.4%, -58.4%);
+}
+/* With the script: centred on her torso in the opening frame, at the tattoo's height and size
+   (kept under the wordmark on wide screens). Pixel values from the stage top,
+   so on desktop the drawing does not move if the hero falls back to its one-screen height. */
+.hero--3d[data-ink] .hero__fallback img { left: var(--ink-x); top: var(--ink-y); height: var(--ink-h); }
+
+/* Copy: the label at load; the line arrives as the close-up lands (the script sets data-reveal). */
+.hero__copy { position: sticky; bottom: 40px; z-index: 2; display: grid; gap: 10px; justify-self: start; }
+.hero--3d .hero__copy p { margin: 0; }
+.hero__line { font-size: min(max(clamp(1.125rem, 1.9vw, 1.5rem), 1.667vw), 2.5rem); line-height: 1.35; max-width: 22ch; }
+/* Until then the label sits where the copy block ends (--drop = the line's height plus the gap,
+   measured by the script), so the opening frame has no empty slot under it. */
+.hero--3d[data-3d="loading"] .hero__copy > .label,
+.hero--3d[data-3d="ready"] .hero__copy:not([data-reveal]) > .label { transform: translateY(var(--drop, 0px)); }
+.hero--3d[data-3d="loading"] .hero__line,
+.hero--3d[data-3d="ready"] .hero__copy:not([data-reveal]) .hero__line { opacity: 0; transform: translateY(12px); pointer-events: none; }
+/* Transitions only once the statue is live, so the switch from the static layout at load is instant.
+   Exit: 200ms, all at once, so scrolling back never waits. Entrance: seen once per visit, so it
+   takes 600ms; the label begins to make room and the line follows 60ms later. */
+.hero--3d[data-3d="ready"] .hero__copy > .label { transition: transform 200ms var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1)); }
+.hero--3d[data-3d="ready"] .hero__line { transition: opacity 200ms var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1)), transform 200ms var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1)); }
+.hero--3d[data-3d="ready"] .hero__copy[data-reveal] > .label { transition: transform 600ms var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1)); }
+.hero--3d[data-3d="ready"] .hero__copy[data-reveal] .hero__line { transition: opacity 600ms var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1)) 60ms, transform 600ms var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1)) 60ms; }
+
+/* "Scroll" shows only once scrolling does something: just after the canvas has faded in, and
+   it leaves at the first scroll. */
+.hero__hint { position: sticky; bottom: 40px; z-index: 2; opacity: 0; transition: opacity 200ms ease; }
+.hero--3d[data-3d="ready"]:not([data-scrolled]) .hero__hint { opacity: 1; transition: opacity 300ms var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1)) 600ms; }
+/* A 1px line under "Scroll" draws down and drains away, twice (4.8s, under the 5s limit), then holds still. It starts
+   once the hint has faded in (600ms + 300ms) and freezes while the hint fades out. Transform only, so
+   it runs on the compositor and never wakes the statue's render loop. It fits in the 40px gutter. */
+.hero__hint::after {
+  content: ""; position: absolute; left: 50%; top: calc(100% + 8px); width: 1px; height: 24px;
+  background: currentColor; transform: scaleY(0); transform-origin: top; pointer-events: none;
+}
+.hero--3d[data-3d="ready"] .hero__hint::after { animation: hint-line 2400ms var(--ease-in-out, cubic-bezier(0.77, 0, 0.175, 1)) 900ms 2; }
+.hero--3d[data-3d="ready"][data-scrolled] .hero__hint::after { animation-play-state: paused; }
+@keyframes hint-line {
+  0% { transform: translateY(0) scaleY(0); }
+  45%, 55% { transform: translateY(0) scaleY(1); }
+  100% { transform: translateY(24px) scaleY(0); }
+}
+
+/* Label and hint can sit over the statue at any width: solid black keeps 4.5:1 or better. */
+.hero--3d .hero__copy > .label, .hero--3d .hero__hint { color: var(--black, #111111); }
+
+/* Phones held upright: the copy sits over the statue, so the statue dissolves into the stage colour behind it.
+   Until the line arrives the veil sits behind the label only, and rises with it. A phone turned sideways
+   (wide and short) uses the PC layout instead, like hero3d.js (PHONE_QUERY). */
+@media (max-width: 799px) and (orientation: portrait) {
+  .hero--3d .hero__copy::before {
+    content: ""; position: absolute; z-index: -1; left: calc(-1 * var(--gutter, clamp(16px, 4vw, 56px))); width: 100vw; top: -64px; bottom: -40px;
+    background: linear-gradient(to top, var(--grey-light, #EDEDED) 55%, transparent); pointer-events: none;
+  }
+  .hero--3d[data-3d="loading"] .hero__copy::before,
+  .hero--3d[data-3d="ready"] .hero__copy:not([data-reveal])::before { transform: translateY(var(--drop, 0px)); }
+  .hero--3d[data-3d="ready"] .hero__copy::before { transition: transform 200ms var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1)); }
+  .hero--3d[data-3d="ready"] .hero__copy[data-reveal]::before { transition: transform 600ms var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1)); }
+  /* Static (and without the script): the drawing fills the band between the wordmark and the full
+     copy. After a failed load this replaces the loading position, whose stems the label would
+     cover once the line is back. */
+  .hero--3d .hero__fallback img,
+  .hero--3d[data-3d="static"] .hero__fallback img { left: 50%; top: calc(16vh + 26svh - 40px); height: min(85svh - 130px, 182vw - 58px); }
+  .hero--3d .hero__fallback img, .hero--3d[data-ink] .hero__fallback img { max-width: none; }
+}
+/* Short upright phones (320x568, 320x480; R6-2 P2): the drawing above ran through the label. Under 741px
+   tall its drawn area fills the band from 16px under the wordmark to about 16px above the label instead. */
+@media (max-width: 799px) and (orientation: portrait) and (max-height: 740px) {
+  .hero--3d .hero__fallback img,
+  .hero--3d[data-3d="static"] .hero__fallback img { top: calc((9vh + 12.5vw + 100svh - 296px) / 2); height: max(48px, (100svh - 9vh - 12.5vw - 328px) / 0.632); }
+}
+@media (min-width: 800px), (orientation: landscape) {
+  /* Sized by the width, but never so tall that it reaches the label on a short, wide window (400% zoom,
+     1280x300, 1920x400, 2560x500: R5-6 Z1). The cap (111vh - 210px, at least 40vh) only bites under about
+     385px tall at 1366 wide or 470px at 1920; every usual screen, sideways phones included, keeps 17.4vw. */
+  .hero--3d .wordmark { font-size: min(17.4vw, max(111vh - 210px, 40vh)); }
+  /* The figure dissolves into the stage at the bottom edge instead of being sliced off when the pin releases. */
+  .hero__stage::after { content: ""; position: absolute; inset: auto 0 0; height: 18vh; background: linear-gradient(to top, var(--grey-light, #EDEDED), transparent); z-index: 1; pointer-events: none; }
+}
+
+/* Static: no script, no WebGL, or a failed or slow load. One screen, the still drawing, nothing pinned. */
+.hero--3d:not([data-3d="loading"]):not([data-3d="ready"]) .hero__stage { position: relative; height: calc(100vh - 80px); height: calc(100svh - 80px); min-height: 480px; }
+.hero--3d:not([data-3d="loading"]):not([data-3d="ready"]) .hero__canvas,
+.hero--3d:not([data-3d="loading"]):not([data-3d="ready"]) .hero__hint { display: none; }
+
+/* Static on a phone turned sideways (short and wide; 2026-11-18, R4-4 round 7): the one-screen stage would be
+   taller than the screen, so the sticky copy pinned to the screen bottom landed inside the wordmark letters,
+   and after a failed load the drawing kept its shrunken loading spot. Here the stage takes its content's
+   height: the wordmark at the top, the copy under it in the normal flow, the drawing beside the copy on the
+   right. Specific enough to beat the [data-ink] rule above. PC and upright phones are unchanged. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .hero.hero--3d:not([data-3d="loading"]):not([data-3d="ready"]) .hero__stage { height: auto; min-height: 0; padding-top: calc(9vh + 15vw + 24px); }
+  .hero.hero--3d:not([data-3d="loading"]):not([data-3d="ready"]) .hero__copy { position: relative; bottom: auto; }
+  .hero.hero--3d:not([data-3d="loading"]):not([data-3d="ready"]) .hero__fallback img {
+    left: 76%; top: calc(9vh + 15vw + 8px); height: calc(100% - 9vh - 15vw - 24px); max-width: 44vw; transform: translateX(-50%);
+  }
+}
+
+/* Very short windows (400% zoom: 1280x800 is 320x200, 1920x1080 is 480x270): the label rides down under the
+   wordmark like everywhere else (keeping it at the top of the copy put it inside the letters, R5-6 Z1), but
+   never further than 40px above the stage bottom, so it stays on the stage when the copy block is taller
+   than the stage (narrow and short, e.g. 320x150). Where the copy fits, the cap equals --drop. */
+@media (max-height: 300px) {
+  .hero--3d[data-3d="loading"] .hero__copy > .label,
+  .hero--3d[data-3d="ready"] .hero__copy:not([data-reveal]) > .label { transform: translateY(min(var(--drop, 0px), 100vh - 40px - 100%)); transform: translateY(min(var(--drop, 0px), 100lvh - 40px - 100%)); }
+}
+
+/* Exit, "Sink" (owner pick R4-2 Q4): once the pin lets go, the statue sinks away slower than the page, so
+   the tattooed back stays in view a little longer and is the last thing to leave. The canvas moves down
+   inside the stage (42% of its height, a touch smaller) while the stage scrolls off: about 58% of the page's
+   speed on screen. Scrubbed by the scroll (scroll-driven animation, runs on the compositor), so it costs
+   no WebGL frame and reverses exactly when scrolling back. exit 0% is the pin release (the stage is the
+   last 100vh of the 320vh section), exit 100% is the stage leaving the top. The stage's overflow: clip,
+   its bottom fade on PC and the copy's veil on phones take the statue's lower edge as it sinks.
+   Browsers without scroll-driven animations (Firefox for now) scroll it away as one block, as before. */
+@supports (animation-timeline: view()) {
+  .hero--3d[data-3d="ready"] { view-timeline: --statue block; }
+  .hero--3d[data-3d="ready"] .hero__canvas { animation: statue-sink linear both; animation-timeline: --statue; animation-range: exit 0% exit 100%; }
+}
+@keyframes statue-sink { to { transform: translateY(42%) scale(0.96); } }
+/* Print and Save as PDF (R6-2 round 3, X1): no canvas and no pinned 320vh (which printed as blank pages).
+   The hero prints as one plain block: the wordmark, the still drawing, then the label and the line, all
+   in the normal flow. Travels with this file to the static host, so the live hero prints the same. */
+@media print {
+  .hero--3d, .hero--3d[data-3d] { height: auto !important; min-height: 0 !important; background: none; }
+  .hero--3d .hero__stage { position: relative !important; display: block !important; height: auto !important; min-height: 0 !important; overflow: visible !important; padding: 0 var(--gutter, clamp(16px, 4vw, 56px)) 24px !important; background: none; }
+  .hero__stage::after, .hero--3d .hero__copy::before, .hero__canvas, .hero__hint { display: none !important; }
+  .hero--3d .wordmark { position: static !important; transform: none !important; font-size: 15vw !important; margin: 0 0 16px -0.04em; }
+  .hero--3d .hero__fallback { position: static !important; opacity: 1 !important; filter: none !important; visibility: visible !important; }
+  .hero--3d .hero__fallback img { position: static !important; display: block; opacity: 1 !important; transform: none !important; width: auto !important; height: 4.5in !important; max-width: 100% !important; margin: 0 auto 16px; }
+  .hero--3d .hero__copy { position: static !important; max-width: none !important; }
+  .hero--3d .hero__copy > .label, .hero--3d .hero__line { transform: none !important; opacity: 1 !important; }
+  .hero, .hero__fallback img { break-inside: avoid; }
+}
